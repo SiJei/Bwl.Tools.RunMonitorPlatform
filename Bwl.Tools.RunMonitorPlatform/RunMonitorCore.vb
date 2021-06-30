@@ -85,28 +85,26 @@ Public Class RunMonitorCore
 
                     If maximumCheckFails = 0 Then task.State = TaskState.Ok Else task.State = TaskState.Warning
 
-                    For Each action In task.FaultActions
-                        If maximumCheckFails >= action.FaultsToRun And (Now - action.LastAttempt.Time).TotalSeconds > action.DelayBeforeActionSeconds Then
-                            task.State = TaskState.Fault
-                            Try
-                                _logger.AddMessage("Task FaultAction" + task.ID + " - " + action.Name)
-                                action.Run()
-                                action.LastAttempt.SetNowOk("")
-                                _logger.AddDebug("Task FaultAction" + task.ID + " - " + action.Name + " - ok")
-                                _logger.AddDebug(action.LastAttempt.Message)
-                                _logger.AddDebug(action.LastAttempt.ErrorText)
-                            Catch ex As FaultActionException
-                                action.LastAttempt.SetNowError("", ex.MainMessage)
-                                _logger.AddWarning("Task FaultAction Failed " + task.ID + " - " + ex.MainMessage)
-                                _logger.AddDebug(action.LastAttempt.Message)
-                                _logger.AddDebug(action.LastAttempt.ErrorText)
-                            Catch ex As Exception
-                                action.LastAttempt.SetNowError("", ex.Message)
-                                _logger.AddWarning("Task FaultAction Failed " + task.ID + " - " + ex.Message)
-                                _logger.AddDebug(action.LastAttempt.Message)
-                                _logger.AddDebug(action.LastAttempt.ErrorText)
-                            End Try
-                        End If
+                    For Each action In task.FaultActions.Where(Function(f) maximumCheckFails >= f.FaultsToRun And If(f.CheckFaultsOnly, maximumCheckFails Mod f.FaultsToRun = 0, (Now - f.LastAttempt.Time).TotalSeconds > f.DelayBeforeActionSeconds))
+                        task.State = TaskState.Fault
+                        Try
+                            _logger.AddMessage("Task FaultAction" + task.ID + " - " + action.Name)
+                            action.Run()
+                            action.LastAttempt.SetNowOk("")
+                            _logger.AddDebug("Task FaultAction" + task.ID + " - " + action.Name + " - ok")
+                            _logger.AddDebug(action.LastAttempt.Message)
+                            _logger.AddDebug(action.LastAttempt.ErrorText)
+                        Catch ex As FaultActionException
+                            action.LastAttempt.SetNowError("", ex.MainMessage)
+                            _logger.AddWarning("Task FaultAction Failed " + task.ID + " - " + ex.MainMessage)
+                            _logger.AddDebug(action.LastAttempt.Message)
+                            _logger.AddDebug(action.LastAttempt.ErrorText)
+                        Catch ex As Exception
+                            action.LastAttempt.SetNowError("", ex.Message)
+                            _logger.AddWarning("Task FaultAction Failed " + task.ID + " - " + ex.Message)
+                            _logger.AddDebug(action.LastAttempt.Message)
+                            _logger.AddDebug(action.LastAttempt.ErrorText)
+                        End Try
                     Next
                 End If
             End If
